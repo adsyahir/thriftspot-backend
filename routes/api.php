@@ -1,19 +1,31 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// Public routes
+Route::prefix('auth')->group(function () {
+    Route::post('login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('auth.login');
 
-Route::post('/user',[UserController::class, 'store'])->name('store');
+    Route::post('register', [UserController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('auth.register');
+});
 
-Route::get('/test', function (Request $request) {
+// Protected routes
+Route::middleware('auth:api')->group(function () {
+    // Authentication routes (authenticated)
+    Route::prefix('auth')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
+        Route::get('me', [AuthController::class, 'me'])->name('auth.me');
+    });
 
-    return response()->json([
-        'success' => true,
-        'message' => 'User created successfully',
-    ]);
+    // User routes
+    Route::prefix('users')->group(function () {
+        Route::get('me', [UserController::class, 'show'])->name('users.me');
+    });
 });
