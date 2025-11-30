@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ConditionalRateLimit;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,8 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->alias([
+            'throttle.conditional' => ConditionalRateLimit::class,
+        ]);
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
         $middleware->api(append: [
-            'throttle:60,1',
+            'throttle.conditional:60,1',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

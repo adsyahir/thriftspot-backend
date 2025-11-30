@@ -3,16 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Http\Resources\UserResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     /**
      * Get a JWT via given credentials.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function login(LoginRequest $request)
+    public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only(['email', 'password']);
 
@@ -31,25 +31,35 @@ class AuthController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        return $this->respondWithToken($token);
+        $cookie = cookie(
+            'token',
+            $token,
+            auth()->factory()->getTTL(),
+            '/',
+            null,
+            true,
+            true,
+            'strict'
+        );
+
+        return response()->json([
+            'user' => new UserResource(auth()->user()),
+            'message' => 'Login successful',
+        ])->cookie($cookie);
     }
 
     /**
      * Get the authenticated User.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function me()
+    public function me(): JsonResponse
     {
         return response()->json(auth()->user());
     }
 
     /**
      * Log the user out (Invalidate the token).
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function logout()
+    public function logout(): JsonResponse
     {
         auth()->logout();
 
@@ -58,21 +68,16 @@ class AuthController extends Controller
 
     /**
      * Refresh a token.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function refresh()
+    public function refresh(): JsonResponse
     {
         return $this->respondWithToken(auth()->refresh());
     }
 
     /**
      * Get the token array structure.
-     *
-     * @param  string  $token
-     * @return \Illuminate\Http\JsonResponse
      */
-    protected function respondWithToken($token)
+    protected function respondWithToken(string $token): JsonResponse
     {
         return response()->json([
             'access_token' => $token,

@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle.conditional:5,1')
         ->name('auth.login');
 
     Route::post('register', [UserController::class, 'store'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle.conditional:10,1')
         ->name('auth.register');
 });
 
