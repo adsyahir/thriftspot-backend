@@ -25,7 +25,9 @@ class UserController extends Controller
         info('SignUpRequest');
         $validated = $request->validated();
         // dd($validated);
-        User::create($validated);
+        $user = User::create($validated);
+
+        $user->assignRole('user');
 
         return response()->json([
             'success' => true,
