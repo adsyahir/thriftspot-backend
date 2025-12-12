@@ -22,7 +22,7 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('logout', 'logout')->name('auth.logout');
         Route::post('refresh', 'refresh')->name('auth.refresh');
-        Route::get('me', 'me')->name('auth.me');
+        Route::post('me', 'me')->name('auth.me');
     });
 
     Route::controller(RolePermissionController::class)->group(function () {
