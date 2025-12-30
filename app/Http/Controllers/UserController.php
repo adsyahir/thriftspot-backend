@@ -22,9 +22,8 @@ class UserController extends Controller
      */
     public function store(SignUpRequest $request): JsonResponse
     {
-        info('SignUpRequest');
         $validated = $request->validated();
-        // dd($validated);
+
         $user = User::create($validated);
 
         $user->assignRole('user');

@@ -37,6 +37,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('permissions', 'createPermission')->name('permissions.store');
         Route::put('permissions/{id}', 'updatePermission')->name('permissions.update');
         Route::delete('permissions/{id}', 'deletePermission')->name('permissions.destroy');
+
+        // User Role Assignment
+        Route::get('users/roles', 'getUsersWithRoles')->name('users.roles.index');
+        Route::post('users/{userId}/roles', 'assignRoleToUser')->name('users.roles.assign');
+        Route::delete('users/{userId}/roles', 'removeRoleFromUser')->name('users.roles.remove');
     });
 
     // User routes

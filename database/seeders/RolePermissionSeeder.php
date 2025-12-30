@@ -18,20 +18,20 @@ class RolePermissionSeeder extends Seeder
         // Create Permissions
         $permissions = [
             // Post permissions
-            'view posts',
-            'create posts',
-            'edit posts',
-            'delete posts',
-            'publish posts',
+            'view-posts',
+            'create-posts',
+            'edit-posts',
+            'delete-posts',
+            'publish-posts',
 
             // User permissions
-            'view users',
-            'create users',
-            'edit users',
-            'delete users',
+            'view-users',
+            'create-users',
+            'edit-users',
+            'delete-users',
 
             // Settings
-            'manage settings',
+            'manage-settings',
         ];
 
         foreach ($permissions as $permission) {
@@ -47,8 +47,8 @@ class RolePermissionSeeder extends Seeder
         // User - basic permissions only
         $user = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'api']);
         $user->syncPermissions([
-            'view posts',
-            'create posts',
+            'view-posts',
+            'create-posts',
         ]);
 
         // Create Test Users
@@ -63,16 +63,11 @@ class RolePermissionSeeder extends Seeder
             ]
         );
         $adminUser->assignRole('admin');
-
         // Regular User
-        $regularUser = User::firstOrCreate(
-            ['email' => 'user@example.com'],
-            [
-                'name' => 'Regular User',
-                'username' => 'user',
-                'password' => Hash::make('password'),
-            ]
-        );
-        $regularUser->assignRole('user');
+
+        User::factory()
+        ->count(50)
+        ->create()
+        ->each(fn($user) => $user->assignRole('user'));
     }
 }

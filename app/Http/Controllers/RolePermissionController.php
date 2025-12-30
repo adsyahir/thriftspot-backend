@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class RolePermissionController extends Controller
 {
@@ -233,21 +234,66 @@ class RolePermissionController extends Controller
 
     /**
      * Get all users with their roles
+     * Supports search and pagination
+     *
+     * Query params:
+     * - per_page: number of items per page (default: 10)
+     * - search: global search across name, email, username
+     * - name: filter by name
+     * - email: filter by email
+     * - role: filter by role name
      */
-    public function getUsersWithRoles(): JsonResponse
+    public function getUsersWithRoles(Request $request): JsonResponse
     {
-        $users = \App\Models\User::with('roles', 'permissions')->get()->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'username' => $user->username,
-                'roles' => $user->getRoleNames(),
-                'permissions' => $user->getAllPermissions()->pluck('name'),
-                'created_at' => $user->created_at,
-                'updated_at' => $user->updated_at,
-            ];
-        });
+        // Get pagination and search parameters
+        $perPage = $request->get('per_page', 10); // Default 10 items per page
+        $search = $request->get('search'); // Global search query
+        $name = $request->get('name'); // Search by name
+        $email = $request->get('email'); // Search by email
+        $role = $request->get('role'); // Filter by role
+
+        // Build query
+        $query = User::with('roles', 'permissions');
+
+        // Global search across name, email, and username
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%");
+            });
+        }
+
+        // Specific field searches
+        if ($name) {
+            $query->where('name', 'like', "%{$name}%");
+        }
+
+        if ($email) {
+            $query->where('email', 'like', "%{$email}%");
+        }
+
+        // Filter by role name
+        if ($role) {
+            $query->whereHas('roles', function($q) use ($role) {
+                $q->where('name', 'like', "%{$role}%");
+            });
+        }
+
+        // Paginate and transform results
+        $users = $query->paginate($perPage)
+            ->through(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'roles' => $user->getRoleNames(),
+                    'permissions' => $user->getAllPermissions()->pluck('name'),
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            });
 
         return response()->json(['data' => $users]);
     }

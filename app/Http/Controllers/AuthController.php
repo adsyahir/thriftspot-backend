@@ -97,7 +97,7 @@ class AuthController extends Controller
             $accessTokenCookie = cookie(
                 'access_token',
                 $newAccessToken,
-                config('jwt.ttl', 60), // TTL in minutes
+                config('jwt.ttl', 5), // TTL in minutes
                 '/',
                 'localhost',
                 false, // secure
@@ -109,7 +109,7 @@ class AuthController extends Controller
             // Return new access token (keep existing refresh token)
             return response()->json([
                 'access_token' => $newAccessToken,
-                'expires_in' => config('jwt.ttl', 60) * 60,
+                'expires_in' => config('jwt.ttl', 5),
                 'message' => 'Token refreshed successfully',
             ])->cookie($accessTokenCookie);
         } catch (\Exception $e) {
@@ -148,7 +148,7 @@ class AuthController extends Controller
         $accessTokenCookie = cookie(
             'access_token',
             $token,
-            config('jwt.ttl', 60), // TTL in minutes
+            config('jwt.ttl', 5), // TTL in minutes
             '/',
             'localhost',
             false, // secure - false for localhost HTTP
@@ -173,7 +173,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => new UserResource(auth()->user()),
             'message' => 'Success',
-            'expires_in' => config('jwt.ttl', 60) * 60,
+            'expires_in' => config('jwt.ttl', 5),
             'access_token' => $token,
         ])->cookie($accessTokenCookie)->cookie($refreshTokenCookie);
     }
