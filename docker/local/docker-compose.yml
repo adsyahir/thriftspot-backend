@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: docker/local/Dockerfile
+    container_name: thriftspot-app
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ../../.env
+    volumes:
+      - ../../:/app
+      - ../../storage:/app/storage
+      - ../../bootstrap/cache:/app/bootstrap/cache
+    ports:
+      - "${DOCKER_APP_PORT:-9000}:9000"
+    environment:
+      - APP_ENV=${APP_ENV}
+      - APP_DEBUG=${APP_DEBUG}
+    networks:
+      - thriftspot-network
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:alpine
+    container_name: thriftspot-nginx
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    ports:
+      - "${DOCKER_NGINX_HTTP_PORT:-8080}:80"
+      - "${DOCKER_NGINX_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ../../:/app
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - thriftspot-network
+    depends_on:
+      - app
+
+  db:
+    image: postgres:16-alpine
+    container_name: thriftspot-pgsql
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DOCKER_DB_PORT:-5433}:5432"
+    networks:
+      - thriftspot-network
+
+networks:
+  thriftspot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
