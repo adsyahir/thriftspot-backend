@@ -66,7 +66,7 @@ class RolePermissionSeeder extends Seeder
         // Regular User
 
         User::factory()
-        ->count(50)
+        ->count(500)
         ->create()
         ->each(fn($user) => $user->assignRole('user'));
     }
