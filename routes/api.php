@@ -14,6 +14,8 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [UserController::class, 'store'])
         ->middleware('throttle.conditional:10,1')
         ->name('auth.register');
+
+    Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
 });
 
 // Protected routes
@@ -21,7 +23,6 @@ Route::middleware('auth:api')->group(function () {
     // Authentication routes (authenticated)
     Route::prefix('auth')->controller(AuthController::class)->group(function () {
         Route::post('logout', 'logout')->name('auth.logout');
-        Route::post('refresh', 'refresh')->name('auth.refresh');
         Route::post('me', 'me')->name('auth.me');
     });
 

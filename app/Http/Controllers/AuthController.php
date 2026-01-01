@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LoginRequest;
-use App\Http\Resources\UserResource;
+use App\Models\RefreshToken;
 use Illuminate\Http\JsonResponse;
+use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Log;
+use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
@@ -39,7 +40,7 @@ class AuthController extends Controller
      * Get the authenticated User.
      */
     public function me(): JsonResponse
-    {
+    {      
         $user = auth()->user()->load(['roles', 'permissions']);
         return response()->json(new UserResource($user));
     }
@@ -49,17 +50,19 @@ class AuthController extends Controller
      */
     public function logout(): JsonResponse
     {
-        Log::info('User logged out', [
-            'user_id' => auth()->id(),
-            'ip' => request()->ip(),
-        ]);
+        $userId = auth()->id();
 
-        // Invalidate token
+        // Delete refresh token from database
+        $refreshTokenValue = request()->cookie('refresh_token');
+        if ($refreshTokenValue) {
+            \App\Models\RefreshToken::where('token', $refreshTokenValue)->delete();
+        }
+
+        // Invalidate JWT access token
         auth()->logout();
 
-        // Clear both cookies
+        // Clear both cookies from browser
         return response()->json(['message' => 'Successfully logged out'])
-            ->cookie(Cookie::forget('access_token'))
             ->cookie(Cookie::forget('refresh_token'));
     }
 
@@ -88,30 +91,40 @@ class AuthController extends Controller
             // Generate new access token for the user
             $newAccessToken = auth()->login($refreshToken->user);
 
-            Log::info('Access token refreshed via refresh_token', [
+            // SECURITY: Refresh Token Rotation
+            // Delete old refresh token (invalidates it immediately)
+            $refreshToken->delete();
+
+            // Generate new refresh token
+            $newRefreshTokenValue = bin2hex(random_bytes(32));
+            RefreshToken::create([
                 'user_id' => $refreshToken->user_id,
-                'ip' => request()->ip(),
+                'token' => $newRefreshTokenValue,
+                'expires_at' => now()->addMinutes(config('jwt.refresh_ttl')),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
             ]);
 
-            // Create access token cookie
-            $accessTokenCookie = cookie(
-                'access_token',
-                $newAccessToken,
-                config('jwt.ttl', 5), // TTL in minutes
+            // Create new refresh token cookie
+            $ttlMinutes = config('jwt.refresh_ttl');
+            $refreshTokenCookie = cookie(
+                'refresh_token',
+                $newRefreshTokenValue,
+                $ttlMinutes,
                 '/',
-                'localhost',
-                false, // secure
-                true,  // httpOnly
+                '', // domain - empty string for current domain without subdomain restrictions
+                false, // secure - false for localhost HTTP
+                true,  // httpOnly - SECURE
                 false, // raw
-                'lax'  // sameSite
+                'lax'  // sameSite - lax for cross-origin cookie sharing
             );
 
-            // Return new access token (keep existing refresh token)
+            // Return new access token (refresh token sent via cookie)
             return response()->json([
                 'access_token' => $newAccessToken,
-                'expires_in' => config('jwt.ttl', 5),
+                'expires_in' => config('jwt.ttl'),
                 'message' => 'Token refreshed successfully',
-            ])->cookie($accessTokenCookie);
+            ])->cookie($refreshTokenCookie);
         } catch (\Exception $e) {
             Log::error('Token refresh failed', [
                 'error' => $e->getMessage(),
@@ -131,51 +144,37 @@ class AuthController extends Controller
         $refreshToken = bin2hex(random_bytes(32));
 
         // Revoke old refresh tokens for this user (optional security measure)
-        \App\Models\RefreshToken::where('user_id', auth()->id())
+        RefreshToken::where('user_id', auth()->id())
             ->where('expires_at', '<', now())
             ->delete();
 
         // Store refresh token in database
-        \App\Models\RefreshToken::create([
+        RefreshToken::create([
             'user_id' => auth()->id(),
             'token' => $refreshToken,
             'expires_at' => now()->addDays(14), // 2 weeks
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
-
-        // Create access token cookie (JWT - short lived)
-        $accessTokenCookie = cookie(
-            'access_token',
-            $token,
-            config('jwt.ttl', 5), // TTL in minutes
-            '/',
-            'localhost',
-            false, // secure - false for localhost HTTP
-            true,  // httpOnly - SECURE
-            false, // raw
-            'lax'  // sameSite
-        );
-
         // Create refresh token cookie (random token - long lived)
         $refreshTokenCookie = cookie(
             'refresh_token',
             $refreshToken,
-            20160, // 2 weeks (in minutes)
+            config('jwt.refresh_ttl'), // 2 weeks (in minutes)
             '/',
-            'localhost', // domain - 'localhost' works across all ports
+            '', // domain - empty string for current domain without subdomain restrictions
             false, // secure - false for localhost HTTP
             true,  // httpOnly - SECURE
             false, // raw
-            'lax'  // sameSite - 'lax' works with same domain
+            'lax'  // sameSite - lax for cross-origin cookie sharing
         );
 
         return response()->json([
             'user' => new UserResource(auth()->user()),
             'message' => 'Success',
-            'expires_in' => config('jwt.ttl', 5),
+            'expires_in' => config('jwt.ttl'),
             'access_token' => $token,
-        ])->cookie($accessTokenCookie)->cookie($refreshTokenCookie);
+        ])->cookie($refreshTokenCookie);
     }
 
 }
