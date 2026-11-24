@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MalaysianState;
 use App\Http\Requests\ShopRequest;
 use App\Http\Resources\ShopResource;
+use App\Models\Item;
 use App\Models\Shop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class ShopController extends Controller
 {
@@ -15,9 +18,18 @@ class ShopController extends Controller
     {
         $perPage = max(1, min(50, $request->integer('per_page', 12)));
 
-        return ShopResource::collection(
-            Shop::query()->latest('id')->paginate($perPage)
-        );
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', Rule::enum(MalaysianState::class)],
+        ]);
+
+        $shops = Shop::query()
+            ->when($request->filled('state'), fn ($q) => $q->where('state', $request->input('state')))
+            ->when($request->filled('search'), fn ($q) => Item::whereContains($q, 'name', $request->string('search')->toString()))
+            ->latest('id')
+            ->paginate($perPage);
+
+        return ShopResource::collection($shops);
     }
 
     public function mine(Request $request): AnonymousResourceCollection

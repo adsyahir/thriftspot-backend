@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BrowseController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\ShopController;
@@ -20,6 +22,9 @@ Route::prefix('auth')->group(function () {
     Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
 });
 
+Route::get('items', [BrowseController::class, 'index'])->name('items.index');
+Route::get('items/{item}', [BrowseController::class, 'show'])->whereNumber('item')->name('items.show');
+Route::post('items/{item}/view', [BrowseController::class, 'view'])->whereNumber('item')->name('items.view');
 Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
 Route::get('shops/{shop}', [ShopController::class, 'show'])->whereNumber('shop')->name('shops.show');
 
@@ -60,6 +65,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::delete('shops/{shop}', [ShopController::class, 'destroy'])->name('shops.destroy');
 
+    Route::get('my/analytics', [AnalyticsController::class, 'mine'])->name('analytics.mine');
     Route::get('my/items', [ItemController::class, 'mine'])->name('items.mine');
     Route::get('my/items/{item}', [ItemController::class, 'showMine'])->name('items.show.mine');
     Route::post('items', [ItemController::class, 'store'])->name('items.store');

@@ -6,9 +6,11 @@ use App\Enums\ItemCategory;
 use App\Enums\ItemCondition;
 use App\Enums\ItemStatus;
 use Database\Factories\ItemFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Item extends Model
@@ -48,6 +50,11 @@ class Item extends Model
         return $this->belongsTo(Shop::class);
     }
 
+    public function viewDays(): HasMany
+    {
+        return $this->hasMany(ItemViewDay::class);
+    }
+
     public function deleteImage(): void
     {
         if ($this->image_path) {
@@ -56,10 +63,16 @@ class Item extends Model
     }
 
     /**
-     * Escape LIKE wildcards so user input matches literally.
+     * Case-insensitive "contains" match with %, _ and \ taken literally.
+     *
+     * Declares the escape character explicitly because SQLite has no default one
+     * (Postgres does), and lower() on both sides keeps matching case-insensitive on both.
      */
-    public static function escapeLike(string $value): string
+    public static function whereContains(Builder $query, string $column, string $term, string $boolean = 'and'): Builder
     {
-        return addcslashes($value, '%_\\');
+        $wrapped = $query->getQuery()->getGrammar()->wrap($column);
+        $pattern = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
+
+        return $query->whereRaw("lower({$wrapped}) like ? escape '\\'", [$pattern], $boolean);
     }
 }

@@ -29,7 +29,7 @@ class ItemController extends Controller
             ->whereHas('shop', fn ($q) => $q->where('user_id', $request->user('api')->id))
             ->when($request->filled('shop_id'), fn ($q) => $q->where('shop_id', $request->integer('shop_id')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
-            ->when($request->filled('search'), fn ($q) => $q->whereLike('name', '%'.Item::escapeLike($request->string('search')->toString()).'%'))
+            ->when($request->filled('search'), fn ($q) => Item::whereContains($q, 'name', $request->string('search')->toString()))
             ->latest('id')
             ->paginate($perPage);
 
