@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
@@ -58,6 +59,12 @@ Route::middleware('auth:api')->group(function () {
     Route::post('shops', [ShopController::class, 'store'])->name('shops.store');
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::delete('shops/{shop}', [ShopController::class, 'destroy'])->name('shops.destroy');
+
+    Route::get('my/items', [ItemController::class, 'mine'])->name('items.mine');
+    Route::get('my/items/{item}', [ItemController::class, 'showMine'])->name('items.show.mine');
+    Route::post('items', [ItemController::class, 'store'])->name('items.store');
+    Route::put('items/{item}', [ItemController::class, 'update'])->name('items.update');
+    Route::delete('items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
 
     // User routes
     Route::prefix('users')->group(function () {

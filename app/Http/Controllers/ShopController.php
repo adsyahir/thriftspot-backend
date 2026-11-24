@@ -52,6 +52,7 @@ class ShopController extends Controller
     {
         $this->authorize('delete', $shop);
 
+        $shop->items->each->deleteImage();
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
