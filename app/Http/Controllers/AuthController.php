@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
+use App\Http\Resources\UserResource;
 use App\Models\RefreshToken;
 use Illuminate\Http\JsonResponse;
-use App\Http\Requests\LoginRequest;
-use Illuminate\Support\Facades\Log;
-use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -18,7 +18,7 @@ class AuthController extends Controller
     {
         $credentials = $request->only(['email', 'password']);
 
-        if (!$token = auth()->attempt($credentials)) {
+        if (! $token = auth()->attempt($credentials)) {
             Log::warning('Failed login attempt', [
                 'email' => $request->email,
                 'ip' => $request->ip(),
@@ -34,14 +34,15 @@ class AuthController extends Controller
         ]);
 
         return $this->respondWithToken($token);
-    }   
+    }
 
     /**
      * Get the authenticated User.
      */
     public function me(): JsonResponse
-    {      
+    {
         $user = auth()->user()->load(['roles', 'permissions']);
+
         return response()->json(new UserResource($user));
     }
 
@@ -113,7 +114,7 @@ class AuthController extends Controller
                 $ttlMinutes,
                 '/',
                 '', // domain - empty string for current domain without subdomain restrictions
-                false, // secure - false for localhost HTTP
+                (bool) config('session.secure'), // secure - set SESSION_SECURE_COOKIE=true in production
                 true,  // httpOnly - SECURE
                 false, // raw
                 'lax'  // sameSite - lax for cross-origin cookie sharing
@@ -122,6 +123,7 @@ class AuthController extends Controller
             // Return new access token (refresh token sent via cookie)
             return response()->json([
                 'access_token' => $newAccessToken,
+                'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl'),
                 'message' => 'Token refreshed successfully',
             ])->cookie($refreshTokenCookie);
@@ -163,7 +165,7 @@ class AuthController extends Controller
             config('jwt.refresh_ttl'), // 2 weeks (in minutes)
             '/',
             '', // domain - empty string for current domain without subdomain restrictions
-            false, // secure - false for localhost HTTP
+            (bool) config('session.secure'), // secure - set SESSION_SECURE_COOKIE=true in production
             true,  // httpOnly - SECURE
             false, // raw
             'lax'  // sameSite - lax for cross-origin cookie sharing
@@ -174,7 +176,7 @@ class AuthController extends Controller
             'message' => 'Success',
             'expires_in' => config('jwt.ttl'),
             'access_token' => $token,
+            'token_type' => 'bearer',
         ])->cookie($refreshTokenCookie);
     }
-
 }

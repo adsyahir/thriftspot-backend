@@ -79,6 +79,8 @@ class AuthenticationTest extends TestCase
 
     public function test_login_is_rate_limited(): void
     {
+        config(['app.env' => 'production']);
+
         $user = User::factory()->create([
             'email' => 'test@example.com',
             'password' => bcrypt('password123'),
@@ -102,7 +104,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer '.$token,
-        ])->getJson('/api/auth/me');
+        ])->postJson('/api/auth/me');
 
         $response->assertStatus(200)
             ->assertJson([
@@ -117,5 +119,19 @@ class AuthenticationTest extends TestCase
         $response->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
             ->assertHeader('X-XSS-Protection', '1; mode=block');
+    }
+
+    public function test_general_traffic_does_not_consume_login_limit(): void
+    {
+        config(['app.env' => 'production']);
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/auth/refresh')->assertStatus(401);
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'nobody@example.com',
+            'password' => 'wrongpassword',
+        ])->assertStatus(401);
     }
 }

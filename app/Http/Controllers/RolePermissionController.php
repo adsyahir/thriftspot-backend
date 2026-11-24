@@ -3,13 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Spatie\Permission\Models\Role;
+use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionController extends Controller
 {
+    private const CORE_ROLES = ['admin', 'user'];
+
+    private const CORE_PERMISSIONS = ['view-users', 'manage-settings'];
+
+    private function coreRejection(string $kind, string $action): JsonResponse
+    {
+        return response()->json(['message' => "A core {$kind} cannot be {$action}."], 422);
+    }
+
     /**
      * Get all roles with their permissions
      */
@@ -88,6 +97,10 @@ class RolePermissionController extends Controller
     {
         $role = Role::findOrFail($id);
 
+        if (in_array($role->name, self::CORE_ROLES, true) && $request->input('name') !== $role->name) {
+            return $this->coreRejection('role', 'renamed');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255|unique:roles,name,'.$id,
             'permissions' => 'nullable|array',
@@ -122,6 +135,11 @@ class RolePermissionController extends Controller
     public function deleteRole($id): JsonResponse
     {
         $role = Role::findOrFail($id);
+
+        if (in_array($role->name, self::CORE_ROLES, true)) {
+            return $this->coreRejection('role', 'deleted');
+        }
+
         $role->delete();
 
         return response()->json([
@@ -159,6 +177,10 @@ class RolePermissionController extends Controller
     {
         $permission = Permission::findOrFail($id);
 
+        if (in_array($permission->name, self::CORE_PERMISSIONS, true) && $request->input('name') !== $permission->name) {
+            return $this->coreRejection('permission', 'renamed');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255|unique:permissions,name,'.$id,
         ]);
@@ -183,6 +205,11 @@ class RolePermissionController extends Controller
     public function deletePermission($id): JsonResponse
     {
         $permission = Permission::findOrFail($id);
+
+        if (in_array($permission->name, self::CORE_PERMISSIONS, true)) {
+            return $this->coreRejection('permission', 'deleted');
+        }
+
         $permission->delete();
 
         return response()->json([
@@ -221,6 +248,13 @@ class RolePermissionController extends Controller
         ]);
 
         $user = \App\Models\User::findOrFail($userId);
+
+        if ($request->role === 'admin'
+            && $user->hasRole('admin')
+            && User::role('admin')->count() <= 1) {
+            return response()->json(['message' => 'The last admin cannot lose the admin role.'], 422);
+        }
+
         $user->removeRole($request->role);
 
         return response()->json([
@@ -257,10 +291,10 @@ class RolePermissionController extends Controller
 
         // Global search across name, email, and username
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
             });
         }
 
@@ -275,7 +309,7 @@ class RolePermissionController extends Controller
 
         // Filter by role name
         if ($role) {
-            $query->whereHas('roles', function($q) use ($role) {
+            $query->whereHas('roles', function ($q) use ($role) {
                 $q->where('name', 'like', "%{$role}%");
             });
         }

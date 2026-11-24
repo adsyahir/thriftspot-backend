@@ -27,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             JwtCookieMiddleware::class,
         ]);
         $middleware->api(append: [
-            'throttle.conditional:60,1',
+            'throttle.conditional:60,1,api',
         ]);
 
         // Prevent redirect to 'login' route for API requests

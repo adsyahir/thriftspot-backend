@@ -14,13 +14,13 @@ class ConditionalRateLimit
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next, string $maxAttempts = '60', string $decayMinutes = '1'): Response
+    public function handle(Request $request, Closure $next, string $maxAttempts = '60', string $decayMinutes = '1', string $prefix = ''): Response
     {
         if (! $this->shouldApplyRateLimit()) {
             return $next($request);
         }
 
-        return $this->throttle->handle($request, $next, $maxAttempts, $decayMinutes);
+        return $this->throttle->handle($request, $next, $maxAttempts, $decayMinutes, $prefix);
     }
 
     /**

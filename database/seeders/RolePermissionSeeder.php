@@ -2,9 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -50,24 +48,5 @@ class RolePermissionSeeder extends Seeder
             'view-posts',
             'create-posts',
         ]);
-
-        // Create Test Users
-
-        // Admin User
-        $adminUser = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'Admin User',
-                'username' => 'admin',
-                'password' => Hash::make('password'),
-            ]
-        );
-        $adminUser->assignRole('admin');
-        // Regular User
-
-        User::factory()
-        ->count(500)
-        ->create()
-        ->each(fn($user) => $user->assignRole('user'));
     }
 }
