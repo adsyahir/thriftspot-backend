@@ -133,6 +133,25 @@ class ShopTest extends TestCase
         $this->assertModelExists($shop);
     }
 
+    public function test_update_to_coordinates_with_null_address_clears_old_values(): void
+    {
+        $user = $this->actingAsUser();
+        $shop = Shop::factory()->for($user)->create(['address' => 'Old Street', 'place_id' => 'P1']);
+
+        $this->putJson("/api/shops/{$shop->id}", $this->payload([
+            'location_type' => 'coordinates',
+            'address' => null,
+            'place_id' => null,
+            'latitude' => 3.1,
+            'longitude' => 101.6,
+        ]))->assertOk();
+
+        $fresh = $shop->fresh();
+        $this->assertNull($fresh->address);
+        $this->assertNull($fresh->place_id);
+        $this->assertSame(3.1, $fresh->latitude);
+    }
+
     public function test_admin_can_delete_any_shop(): void
     {
         $this->actingAsUser(role: 'admin');
