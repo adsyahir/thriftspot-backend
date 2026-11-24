@@ -1,59 +1,86 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ThriftSpot API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 JSON API for ThriftSpot, a directory of thrift shops and secondhand items in Malaysia. People sign up, manage shops and items, and see view analytics. Visitors browse items and shops without an account. There is no checkout, cart or messaging: each shop page shows how to contact the shop.
 
-## About Laravel
+The Nuxt 4 frontend lives in the sibling `thriftspot-frontend` repo.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+PHP 8.3, Laravel 12, `tymon/jwt-auth` (access token plus an httpOnly refresh cookie), `spatie/laravel-permission` (roles `admin` and `user`), PHPUnit 11, Postgres (SQLite in tests).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Setup
 
-## Learning Laravel
+### Option 1: `artisan serve`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Needs PHP 8.3 with `pdo_pgsql`, Composer and a Postgres database.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+```
 
-## Laravel Sponsors
+Edit `.env`: set `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` for your Postgres, and set `APP_URL=http://localhost:8000`.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+php artisan migrate --seed
+php artisan storage:link
+php artisan serve
+```
 
-### Premium Partners
+The API is at `http://localhost:8000/api`.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Option 2: Docker
 
-## Contributing
+```bash
+cp .env.example .env     # set APP_KEY and JWT_SECRET as above, or run the artisan commands inside the container
+make up
+make fresh               # migrate:fresh --seed
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Nginx listens on `http://localhost:8080` by default, so set `APP_URL=http://localhost:8080`. Run `docker exec thriftspot-app php artisan storage:link` once. `make help` lists the other targets.
 
-## Code of Conduct
+### Image URLs
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Item photos are stored on the `public` disk and served from `APP_URL/storage/...`. `APP_URL` must match the origin the browser uses to reach the API, and `storage:link` must have been run, or image URLs will be broken.
 
-## Security Vulnerabilities
+### CORS
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+`CORS_ALLOWED_ORIGINS` must include the frontend origin (default `http://localhost:3000`).
 
-## License
+## Tests
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan test
+vendor/bin/pint --dirty
+```
+
+Tests run on in-memory SQLite with fixed test-only keys from `phpunit.xml`. To run them against Postgres, export `DB_CONNECTION=pgsql` and the `DB_*` variables before `php artisan test`.
+
+## Demo data and login
+
+`php artisan db:seed` always seeds roles and permissions. On a local environment (`APP_ENV=local`) it also runs `DemoSeeder`:
+
+- an admin: `admin@example.com` / `password`
+- 20 users, 6 shops, 40 items and 30 days of views
+
+Never use the demo login outside local development.
+
+## API overview
+
+| Area | Endpoints |
+| --- | --- |
+| Auth | `POST auth/register`, `auth/login`, `auth/refresh`, `auth/logout`, `auth/me` |
+| Public | `GET items` (filters: `search`, `category`, `state`, `shop_id`, `min_price`, `max_price`, `sort`), `GET items/{id}`, `POST items/{id}/view`, `GET shops`, `GET shops/{id}` |
+| Signed in | `GET my/shops`, `POST/PUT/DELETE shops`, `GET my/items`, `POST/PUT/DELETE items`, `GET my/analytics?days=` |
+| Admin | roles, permissions and user-role endpoints (`view-users` to read, `manage-settings` to write) |
+
+Lists return `{data, links, meta}`; `per_page` defaults to 12 and is clamped to 1..50. Validation failures return 422 with `message` and `errors`.
+
+## Production notes
+
+- Set `APP_ENV=production`, `APP_DEBUG=false` and `SESSION_SECURE_COOKIE=true`. The refresh cookie's `secure` flag follows this setting.
+- Seed only the roles: `php artisan db:seed --class=RolePermissionSeeder --force`. Do not run `DemoSeeder`, which creates a known admin password.
+- Create your first admin by assigning the `admin` role to a registered user (for example with `php artisan tinker`). The last admin cannot be demoted through the API.
+- Rate limits (login 5/min, register 10/min, other API traffic 60/min, each counted separately) apply only when `APP_ENV` is `production` or `staging`.
