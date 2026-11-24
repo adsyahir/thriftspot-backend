@@ -62,8 +62,12 @@ Tests run on in-memory SQLite with fixed test-only keys from `phpunit.xml`. To r
 
 `php artisan db:seed` always seeds roles and permissions. On a local environment (`APP_ENV=local`) it also runs `DemoSeeder`:
 
-- an admin: `admin@example.com` / `password`
-- 20 users, 6 shops, 40 items and 30 days of views
+- an admin: `admin@example.com` / `password` (owns 2 shops)
+- a seller: `seller@example.com` / `password` (owns 4 shops)
+- 10 filler users
+- 6 shops across Kuala Lumpur, Penang, Johor, Selangor, Sarawak and Melaka, with about 27 hand-written items (active, sold and one hidden) and 30 days of views
+
+The seeder is safe to run more than once. Items have no photos; add one from the item edit page.
 
 Never use the demo login outside local development.
 
