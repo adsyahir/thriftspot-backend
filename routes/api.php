@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,9 @@ Route::prefix('auth')->group(function () {
 
     Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
 });
+
+Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
+Route::get('shops/{shop}', [ShopController::class, 'show'])->whereNumber('shop')->name('shops.show');
 
 // Protected routes
 Route::middleware('auth:api')->group(function () {
@@ -49,6 +53,11 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('users/{userId}/roles', 'removeRoleFromUser')->name('users.roles.remove');
         });
     });
+
+    Route::get('my/shops', [ShopController::class, 'mine'])->name('shops.mine');
+    Route::post('shops', [ShopController::class, 'store'])->name('shops.store');
+    Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
+    Route::delete('shops/{shop}', [ShopController::class, 'destroy'])->name('shops.destroy');
 
     // User routes
     Route::prefix('users')->group(function () {
