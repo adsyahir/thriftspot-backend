@@ -63,16 +63,18 @@ class Item extends Model
     }
 
     /**
-     * Case-insensitive "contains" match with %, _ and \ taken literally.
+     * Case-insensitive "contains" match with %, _ and ! taken literally.
      *
-     * Declares the escape character explicitly because SQLite has no default one
-     * (Postgres does), and lower() on both sides keeps matching case-insensitive on both.
+     * Declares the escape character explicitly because SQLite has no default one (Postgres does),
+     * and lower() on both sides keeps matching case-insensitive on both. The escape character is
+     * "!" rather than a backslash: PDO's pgsql placeholder parser reads `'\'` as an unterminated
+     * string and then loses the bound parameters.
      */
     public static function whereContains(Builder $query, string $column, string $term, string $boolean = 'and'): Builder
     {
         $wrapped = $query->getQuery()->getGrammar()->wrap($column);
-        $pattern = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($term));
 
-        return $query->whereRaw("lower({$wrapped}) like ? escape '\\'", [$pattern], $boolean);
+        return $query->whereRaw("lower({$wrapped}) like ? escape '!'", ['%'.$escaped.'%'], $boolean);
     }
 }

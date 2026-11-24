@@ -56,8 +56,13 @@ class BrowseTest extends TestCase
         $literal = Item::factory()->for($shop)->create(['name' => '50% off bag']);
         Item::factory()->for($shop)->create(['name' => '500 sleeve bag']);
 
+        Item::factory()->for($shop)->create(['name' => 'Wow! sale_item']);
+
         $this->getJson('/api/items?search=denim')->assertJsonCount(1, 'data');
-        $this->getJson('/api/items?search=retro')->assertJsonCount(3, 'data');
+        $this->getJson('/api/items?search='.urlencode('wow!'))->assertJsonCount(1, 'data');
+        $this->getJson('/api/items?search='.urlencode('sale_item'))->assertJsonCount(1, 'data');
+        $this->getJson('/api/items?search='.urlencode('sale-item'))->assertJsonCount(0, 'data');
+        $this->getJson('/api/items?search=retro')->assertJsonCount(4, 'data');
 
         $this->getJson('/api/items?search='.urlencode('50%'))
             ->assertJsonCount(1, 'data')
